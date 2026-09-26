@@ -59,6 +59,10 @@ foreach ($a in $ajustes) {
 
 $guidAlto = '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c'
 $guidMaximo = 'e9a42b02-d5df-448d-aa00-03f14749eb61'
+if ($PlanoEnergia -ne 'Manter' -and $planoAtual -match 'Ultimate|Desempenho M|Alto desempenho|High performance') {
+    Write-Host "`nPlano de energia já é de alto desempenho; mantendo." -ForegroundColor DarkGray
+    $PlanoEnergia = 'Manter'
+}
 Write-Host "`nPlano de energia atual: $planoAtual -> $PlanoEnergia"
 
 if (-not $Aplicar) { return }

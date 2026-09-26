@@ -69,14 +69,16 @@ $alertas = @()
 if ($cfgRamSpeed -and $maxRamSpeed -and $cfgRamSpeed -lt $maxRamSpeed) { $alertas += "RAM rodando abaixo da velocidade nominal ($cfgRamSpeed < $maxRamSpeed): verifique XMP/EXPO na BIOS." }
 $intelBloqueado = ($cpu.Name -match 'Intel') -and ($cpu.Name -notmatch '\d{4,5}K') -and ($board.Product -notmatch 'Z\d{3}')
 if ($cfgRamSpeed -and $cfgRamSpeed -le 2666) {
-    if ($intelBloqueado) { $alertas += "RAM a $cfgRamSpeed MT/s: em Intel sem 'K' e placa não-Z (ex.: H370/B360/B365) esse costuma ser o limite da plataforma, não XMP desligado. Confirme no manual da placa." }
+    if ($cfgRamSpeed -ge $maxRamSpeed -and $maxRamSpeed -lt 2666) { $alertas += "RAM a $cfgRamSpeed MT/s: é a velocidade nominal dos próprios pentes (não é XMP desligado). Pentes mais rápidos só ajudam se a plataforma aceitar." }
+    elseif ($intelBloqueado) { $alertas += "RAM a $cfgRamSpeed MT/s: em Intel sem 'K' e placa não-Z (ex.: H370/B360/B365) o limite da plataforma costuma ser 2666 MT/s, não XMP desligado. Confirme no manual da placa." }
     else { $alertas += "RAM a $cfgRamSpeed MT/s: provavelmente XMP/EXPO desligado. iRacing é sensível a RAM/CPU." }
 }
 if ($info.RAM.TotalGB -lt 24) { $alertas += "RAM total de $($info.RAM.TotalGB) GB: não reserve mais que ~10 GB para o sim se usar SimHub/Discord/navegador junto; observe uso de memória com o sim rodando." }
 if ($ram.Count -eq 1) { $alertas += "Apenas 1 pente de RAM (single channel): perda grande de FPS em jogos limitados por CPU." }
 if ($info.PlanoEnergia -match 'Economia|Power saver') { $alertas += "Plano de energia em economia: $($info.PlanoEnergia)" }
 if ($info.GameDVR -eq 1 -or $info.CapturaEmSegundoPlano -eq 1) { $alertas += "Xbox Game Bar/captura em segundo plano ligada: custa FPS e causa stutter." }
-if ($info.HAGS -ne 2) { $alertas += "HAGS (Agendamento de GPU acelerado por hardware) desligado: teste ligado (necessário para Frame Generation da NVIDIA)." }
+if ($info.HAGS -ne 2) { $alertas += "HAGS (Agendamento de GPU acelerado por hardware) desligado: vale testar ligado e medir (é obrigatório para Frame Generation, que só existe da RTX 40 em diante)." }
+if ($null -eq $info.GameMode) { $info.GameMode = 'padrão (ligado no Windows 10/11)' }
 if ($vbs -and $vbs.VBSStatus -eq 2) { $alertas += "VBS/Integridade de memória ativo: pode custar alguns % de FPS. É um recurso de SEGURANÇA — desligue só se entender o risco." }
 foreach ($g in $info.GPUs) { if ($g.HzAtual -and $g.HzAtual -le 60) { $alertas += "Monitor '$($g.Nome)' a $($g.HzAtual) Hz: confira se o monitor suporta mais e ajuste em Configurações de vídeo." } }
 $info.Alertas = $alertas
