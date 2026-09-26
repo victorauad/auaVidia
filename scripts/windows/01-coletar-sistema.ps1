@@ -50,7 +50,7 @@ $info = [ordered]@{
         Pentes = $ram.Count
         VelocidadeNominalMTs = $maxRamSpeed
         VelocidadeConfiguradaMTs = $cfgRamSpeed
-        Modulos = @($ram | ForEach-Object { "$($_.Manufacturer) $($_.PartNumber.Trim()) $([math]::Round($_.Capacity/1GB))GB @ $($_.ConfiguredClockSpeed)" })
+        Modulos = @($ram | ForEach-Object { "$($_.Manufacturer) $("$($_.PartNumber)".Trim()) $([math]::Round($_.Capacity/1GB))GB @ $($_.ConfiguredClockSpeed)" })
     }
     GPUs = @($gpus | ForEach-Object { @{ Nome = $_.Name; Driver = $_.DriverVersion; Resolucao = "$($_.CurrentHorizontalResolution)x$($_.CurrentVerticalResolution)"; HzAtual = $_.CurrentRefreshRate } })
     NvidiaSmi = $nvidia
