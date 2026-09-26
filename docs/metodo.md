@@ -32,6 +32,13 @@ Sem cenário repetível, a comparação vira ruído.
 - Sugestão: um **replay** de largada com grid cheio, sempre o mesmo trecho, câmera de cockpit.
 - 60–90 s por captura, **3 capturas por configuração**.
 
+**Replay × sessão ao vivo:**
+- As configurações gráficas ativas no replay precisam ser **as mesmas de quando você corre** — se o sim as separa,
+  iguale antes de medir e mude as duas juntas em cada lote.
+- O replay não roda física/FFB/rede e telemetria como a sessão ao vivo → **carga de CPU menor**, números otimistas.
+  Serve para comparar lotes (repetível); a configuração final deve ser **validada numa sessão real**
+  (corrida offline contra IA com grid cheio, ou prática/corrida oficial) com os apps de sempre abertos.
+
 ## Passo 1 — Relatório de hardware (em carga)
 
 ```powershell
