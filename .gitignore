@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+# capturas e backups locais
+runs/*
+!runs/.gitkeep
+iracing/backups/
+*.bak
+tools/*.exe
