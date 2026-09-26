@@ -24,6 +24,7 @@ Objetivos:
 | `docs/prompt-ia.md` | Modelo de prompt para a IA (passo 4). |
 | `docs/kb/` | Base de conhecimento: descrição do vídeo, pesquisa sobre gráficos do iRacing e a revisão dela (`revisao-pesquisa.md`, com correções e plano de lotes para i7-9700 + RTX 3060). |
 | `docs/meu-pc.md` | Perfil e diagnóstico do meu PC (i7-9700 + RTX 3060). |
+| `docs/roteiro-corrida-ia.md` | Passo a passo do benchmark em corrida contra IA. |
 | `docs/diario.md` | Registro dos lotes testados. |
 
 ## Início rápido (Windows)
