@@ -7,7 +7,7 @@ Coletado em 2026-09-26 com `01-coletar-sistema.ps1` (relatório estático, sem c
 | CPU | Intel Core i7-9700 (8C/8T, sem K) | Gargalo esperado no iRacing com grid cheio. Sem overclock possível. |
 | Placa-mãe | ASUS TUF B360M-PLUS GAMING/BR, BIOS 2811 (mai/2020) | Chipset B360: RAM limitada a 2666 MT/s, PCIe 3.0. Verificar BIOS mais nova no site da ASUS (baixa prioridade). |
 | RAM | 16 GB = 2× Corsair Vengeance LPX 8 GB DDR4-2400 C16 | Rodando na velocidade nominal dos pentes (2400) — nada errado. Confirmar **dual channel** no HWiNFO/CPU-Z (pentes nos slots A2 e B2). |
-| GPU | RTX 3060 **12 GB**, driver 616.92, PCIe 3.0 x16, 170 W | Ok. Folga grande para a resolução atual. |
+| GPU | RTX 3060 **12 GB**, driver 616.92, PCIe 3.0 x16, 170 W | Ok. Em 5760×1080 a folga depende do MSAA — o benchmark mostra. |
 | Monitores | **3× 1080p (triple screen, 5760×1080)** ao jogar | O relatório mostrou 1440×900 @ 119 Hz porque o PC estava sendo acessado via TeamViewer. Triple triplica os pixels e, com renderização por tela, também a carga de CPU → gargalo pode ser misto/GPU. Hz ao jogar: a confirmar. |
 | Windows | 11 Pro 24H2 (26100) | — |
 | Plano de energia | Ultimate Performance (ExitLag) | Ok, manter. |
