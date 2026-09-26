@@ -21,9 +21,19 @@ from pathlib import Path
 # Colunas de frametime por ordem de preferência (PresentMon 1.x/2.x e CapFrameX).
 FRAMETIME_COLS = ("MsBetweenPresents", "FrameTime", "msBetweenPresents")
 # Tempo em que a GPU esteve ocupada no frame (serve para dizer se o gargalo é CPU ou GPU).
-GPU_BUSY_COLS = ("MsGPUActive", "GPUBusy", "msGPUActive")
-CPU_BUSY_COLS = ("CPUBusy",)
+GPU_BUSY_COLS = ("MsGPUBusy", "GPUBusy", "MsGPUActive", "msGPUActive")
 APP_COLS = ("Application", "ProcessName")
+# Telemetria opcional (PresentMon 2.x / app de captura). Casamento ignora maiúsculas, espaços e "_".
+TELEMETRIA_COLS = {
+    "gpu_util_pct": ("GPUUtilization", "GPU Utilization", "GPUUtil"),
+    "gpu_temp_c": ("GPUTemperature", "GPU Temperature", "GPUTemp"),
+    "gpu_power_w": ("GPUPower", "GPU Power"),
+    "cpu_util_pct": ("CPUUtilization", "CPU Utilization"),
+    "cpu_temp_c": ("CPUTemperature", "CPU Temperature"),
+}
+# Limiares de GPU Busy (% do frametime). O vídeo usa ~70%: abaixo disso, gargalo de CPU.
+LIMIAR_CPU = 70.0
+LIMIAR_GPU = 90.0
 
 # Um frame é considerado "stutter" se demorar mais que N vezes a mediana.
 STUTTER_FACTOR = 2.0
@@ -43,16 +53,22 @@ class Resultado:
     stutters: int
     gpu_busy_pct: float | None
     gargalo: str
+    telemetria: dict[str, tuple[float, float]] | None = None  # nome -> (média, máximo)
 
     @property
     def stutters_por_min(self) -> float:
         return self.stutters / (self.duracao_s / 60) if self.duracao_s else 0.0
 
 
+def _norm(nome: str) -> str:
+    return nome.replace(" ", "").replace("_", "").lower()
+
+
 def _col(header: list[str], opcoes: tuple[str, ...]) -> str | None:
+    por_nome = {_norm(h): h for h in header}
     for c in opcoes:
-        if c in header:
-            return c
+        if _norm(c) in por_nome:
+            return por_nome[_norm(c)]
     return None
 
 
@@ -64,8 +80,8 @@ def _float(v: str) -> float | None:
     return f if math.isfinite(f) and f > 0 else None
 
 
-def ler_csv(path: Path, processo: str | None = None) -> tuple[list[float], list[float]]:
-    """Retorna (frametimes_ms, gpu_busy_ms) do CSV."""
+def ler_csv(path: Path, processo: str | None = None) -> tuple[list[float], list[float], dict[str, list[float]]]:
+    """Retorna (frametimes_ms, gpu_busy_ms, telemetria) do CSV."""
     with path.open(newline="", encoding="utf-8-sig") as fh:
         # CapFrameX às vezes coloca linhas de comentário antes do cabeçalho.
         linhas = [l for l in fh if not l.startswith("//") and l.strip()]
@@ -76,9 +92,11 @@ def ler_csv(path: Path, processo: str | None = None) -> tuple[list[float], list[
         raise ValueError(f"{path}: nenhuma coluna de frametime encontrada ({', '.join(FRAMETIME_COLS)})")
     gpu_col = _col(header, GPU_BUSY_COLS)
     app_col = _col(header, APP_COLS)
+    tele_cols = {k: c for k, opcoes in TELEMETRIA_COLS.items() if (c := _col(header, opcoes))}
 
     frametimes: list[float] = []
     gpu: list[float] = []
+    tele: dict[str, list[float]] = {k: [] for k in tele_cols}
     for row in reader:
         if processo and app_col and row.get(app_col, "").lower() != processo.lower():
             continue
@@ -90,9 +108,12 @@ def ler_csv(path: Path, processo: str | None = None) -> tuple[list[float], list[
             g = _float(row.get(gpu_col, ""))
             if g is not None:
                 gpu.append(g)
+        for k, c in tele_cols.items():
+            if (v := _float(row.get(c, ""))) is not None:
+                tele[k].append(v)
     if not frametimes:
         raise ValueError(f"{path}: nenhum frame válido")
-    return frametimes, gpu
+    return frametimes, gpu, {k: v for k, v in tele.items() if v}
 
 
 def percentil(valores_ordenados: list[float], p: float) -> float:
@@ -113,7 +134,8 @@ def low_pct(frametimes: list[float], pct: float) -> float:
     return 1000 / statistics.fmean(piores[:n])
 
 
-def analisar(frametimes: list[float], gpu_busy: list[float], nome: str) -> Resultado:
+def analisar(frametimes: list[float], gpu_busy: list[float], nome: str,
+             telemetria: dict[str, list[float]] | None = None) -> Resultado:
     ordenados = sorted(frametimes)
     total_ms = sum(frametimes)
     mediana = statistics.median(frametimes)
@@ -123,9 +145,9 @@ def analisar(frametimes: list[float], gpu_busy: list[float], nome: str) -> Resul
     gargalo = "desconhecido (sem coluna de GPU busy)"
     if gpu_busy and len(gpu_busy) == len(frametimes):
         gpu_pct = 100 * sum(gpu_busy) / total_ms
-        if gpu_pct >= 90:
+        if gpu_pct >= LIMIAR_GPU:
             gargalo = "GPU"
-        elif gpu_pct <= 75:
+        elif gpu_pct < LIMIAR_CPU:
             gargalo = "CPU (ou limitador de FPS/V-Sync)"
         else:
             gargalo = "misto"
@@ -143,12 +165,13 @@ def analisar(frametimes: list[float], gpu_busy: list[float], nome: str) -> Resul
         stutters=stutters,
         gpu_busy_pct=gpu_pct,
         gargalo=gargalo,
+        telemetria={k: (statistics.fmean(v), max(v)) for k, v in (telemetria or {}).items()} or None,
     )
 
 
 def analisar_arquivo(path: Path, processo: str | None = None) -> Resultado:
-    ft, gpu = ler_csv(path, processo)
-    return analisar(ft, gpu, path.stem)
+    ft, gpu, tele = ler_csv(path, processo)
+    return analisar(ft, gpu, path.stem, tele)
 
 
 def _delta(novo: float, base: float, maior_melhor: bool = True) -> str:
@@ -181,6 +204,16 @@ def tabela_markdown(resultados: list[Resultado]) -> str:
                 gpu=gpu, garg=r.gargalo,
             )
         )
+    tele = [r for r in resultados if r.telemetria]
+    if tele:
+        nomes = {"gpu_util_pct": "GPU uso %", "gpu_temp_c": "GPU °C", "gpu_power_w": "GPU W",
+                 "cpu_util_pct": "CPU uso %", "cpu_temp_c": "CPU °C"}
+        chaves = [k for k in nomes if any(k in r.telemetria for r in tele)]
+        linhas += ["", "| Execução | " + " | ".join(f"{nomes[k]} (méd/máx)" for k in chaves) + " |",
+                   "|---|" + "---|" * len(chaves)]
+        for r in tele:
+            cel = [f"{r.telemetria[k][0]:.0f} / {r.telemetria[k][1]:.0f}" if k in r.telemetria else "—" for k in chaves]
+            linhas.append(f"| {r.nome} | " + " | ".join(cel) + " |")
     return "\n".join(linhas)
 
 
@@ -199,6 +232,11 @@ def recomendacoes(resultados: list[Resultado]) -> list[str]:
             "Gargalo de GPU: reduza MSAA/SSAA, resolução, pós-processamento e sombras; aqui cada ajuste gráfico "
             "vira FPS direto."
         )
+    t = ultimo.telemetria or {}
+    if "gpu_temp_c" in t and t["gpu_temp_c"][1] >= 83:
+        dicas.append(f"GPU chegou a {t['gpu_temp_c'][1]:.0f} °C: verifique fluxo de ar/curva de ventoinha antes de mexer em gráficos.")
+    if "cpu_temp_c" in t and t["cpu_temp_c"][1] >= 95:
+        dicas.append(f"CPU chegou a {t['cpu_temp_c'][1]:.0f} °C: provável thermal throttling (confirme no HWiNFO).")
     if ultimo.low_1 < 0.6 * ultimo.fps_medio:
         dicas.append(
             "1% low muito abaixo da média → stutter. Verifique VRAM/RAM, gravação em segundo plano, overlays, "
@@ -255,8 +293,8 @@ def main(argv: list[str] | None = None) -> int:
 
     resultados, series = [], []
     for arq in args.arquivos:
-        ft, gpu = ler_csv(arq, args.processo)
-        resultados.append(analisar(ft, gpu, arq.stem))
+        ft, gpu, tele = ler_csv(arq, args.processo)
+        resultados.append(analisar(ft, gpu, arq.stem, tele))
         series.append((arq.stem, ft))
 
     tabela = tabela_markdown(resultados)

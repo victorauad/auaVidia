@@ -2,7 +2,8 @@
 
 Kit para otimizar um PC de jogo/sim racing **com base em medições**, replicando o processo do vídeo
 [Your iRacing Settings Are Wrong (And It's Not Your Hardware's Fault)](https://www.youtube.com/watch?v=ZMgnmJRoGVk):
-medir → achar o gargalo → mudar uma coisa → medir de novo → manter só o que melhora.
+relatório de hardware em carga → gargalo CPU × GPU (GPU Busy) → screenshots das configurações → prompt para IA →
+aplicar em lotes de 3–4 e medir → manter só o que melhora o frametime.
 
 Objetivos:
 - otimizar as configurações do PC (BIOS, Windows, driver, jogo);
@@ -19,8 +20,10 @@ Objetivos:
 | `scripts/windows/04-benchmark.ps1` | Captura frametimes do jogo com PresentMon em `runs/`. |
 | `analysis/analisar.py` | Resumo e comparação de capturas (PresentMon/CapFrameX CSV): FPS, 1%/0.1% low, p99, stutters, gargalo. |
 | `iracing/iracing_ini.py` | Backup, diff e edição dos `.ini` do iRacing preservando comentários. |
-| `docs/metodo.md` | Passo a passo completo e checklist por prioridade. |
-| `docs/diario.md` | Registro dos experimentos. |
+| `docs/metodo.md` | Os 5 passos do vídeo com os comandos deste repositório. |
+| `docs/prompt-ia.md` | Modelo de prompt para a IA (passo 4). |
+| `docs/kb/` | Base de conhecimento: descrição do vídeo, pesquisa sobre gráficos do iRacing e a revisão dela (`revisao-pesquisa.md`, com correções e plano de lotes para i7-9700 + RTX 3060). |
+| `docs/diario.md` | Registro dos lotes testados. |
 
 ## Início rápido (Windows)
 

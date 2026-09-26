@@ -44,6 +44,21 @@ class TestAnalisar(unittest.TestCase):
         self.assertEqual(r.frames, 50)
         self.assertAlmostEqual(r.fps_medio, 125.0)
 
+    def test_presentmon_v2_msgpubusy_e_telemetria(self):
+        linhas = ["jogo.exe,10.0,6.0,60,70"] * 99 + ["jogo.exe,10.0,6.0,60,88"]
+        p = escrever_csv(self.tmp, "t.csv", "Application,MsBetweenPresents,MsGPUBusy,GPU Utilization,GPU_Temperature", linhas)
+        r = analisar.analisar_arquivo(p)
+        self.assertAlmostEqual(r.gpu_busy_pct, 60.0)
+        self.assertTrue(r.gargalo.startswith("CPU"))
+        self.assertEqual(r.telemetria["gpu_temp_c"][1], 88)
+        tabela = analisar.tabela_markdown([r])
+        self.assertIn("GPU °C", tabela)
+        self.assertTrue(any("88 °C" in d for d in analisar.recomendacoes([r])))
+
+    def test_limiar_misto(self):
+        p = escrever_csv(self.tmp, "m.csv", "MsBetweenPresents,MsGPUBusy", ["10,8"] * 10)
+        self.assertEqual(analisar.analisar_arquivo(p).gargalo, "misto")
+
     def test_comparar_markdown(self):
         a = escrever_csv(self.tmp, "base.csv", "MsBetweenPresents", ["10"] * 100)
         b = escrever_csv(self.tmp, "novo.csv", "MsBetweenPresents", ["8"] * 100)

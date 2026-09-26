@@ -67,7 +67,12 @@ $info = [ordered]@{
 # Alertas rápidos
 $alertas = @()
 if ($cfgRamSpeed -and $maxRamSpeed -and $cfgRamSpeed -lt $maxRamSpeed) { $alertas += "RAM rodando abaixo da velocidade nominal ($cfgRamSpeed < $maxRamSpeed): verifique XMP/EXPO na BIOS." }
-if ($cfgRamSpeed -and $cfgRamSpeed -le 2666) { $alertas += "RAM a $cfgRamSpeed MT/s: provavelmente XMP/EXPO desligado. iRacing é sensível a RAM/CPU." }
+$intelBloqueado = ($cpu.Name -match 'Intel') -and ($cpu.Name -notmatch '\d{4,5}K') -and ($board.Product -notmatch 'Z\d{3}')
+if ($cfgRamSpeed -and $cfgRamSpeed -le 2666) {
+    if ($intelBloqueado) { $alertas += "RAM a $cfgRamSpeed MT/s: em Intel sem 'K' e placa não-Z (ex.: H370/B360/B365) esse costuma ser o limite da plataforma, não XMP desligado. Confirme no manual da placa." }
+    else { $alertas += "RAM a $cfgRamSpeed MT/s: provavelmente XMP/EXPO desligado. iRacing é sensível a RAM/CPU." }
+}
+if ($info.RAM.TotalGB -lt 24) { $alertas += "RAM total de $($info.RAM.TotalGB) GB: não reserve mais que ~10 GB para o sim se usar SimHub/Discord/navegador junto; observe uso de memória com o sim rodando." }
 if ($ram.Count -eq 1) { $alertas += "Apenas 1 pente de RAM (single channel): perda grande de FPS em jogos limitados por CPU." }
 if ($info.PlanoEnergia -match 'Economia|Power saver') { $alertas += "Plano de energia em economia: $($info.PlanoEnergia)" }
 if ($info.GameDVR -eq 1 -or $info.CapturaEmSegundoPlano -eq 1) { $alertas += "Xbox Game Bar/captura em segundo plano ligada: custa FPS e causa stutter." }

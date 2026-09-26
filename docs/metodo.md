@@ -1,98 +1,92 @@
-# Método: otimizar com dados, não com "melhores configurações" genéricas
+# Método: hardware entra, configurações saem
 
-A ideia central do vídeo *"Your iRacing Settings Are Wrong (And It's Not Your Hardware's Fault)"* é que
-configurações copiadas de quem tem uma GPU de US$ 5.000 não servem para o seu PC. O caminho é:
+Processo do vídeo *"Your iRacing Settings Are Wrong (And It's Not Your Hardware's Fault)"* (descrição em
+[`kb/descricao-video.md`](kb/descricao-video.md)), adaptado para as ferramentas deste repositório.
+Serve para iRacing, MSFS 2024, AC, ACC, AMS2, rFactor 2 etc. **Repita depois de cada atualização grande do sim**:
+opções mudam de nome, aparecem e somem.
 
-1. **Descobrir o seu gargalo** (CPU ou GPU) com uma medição.
-2. **Mudar uma coisa por vez.**
-3. **Medir de novo no mesmo cenário** e manter só o que melhorou o **1% low / frametime**, não só o FPS médio.
+Princípios:
+- Relatório de hardware **com o sim rodando em carga**, nunca em idle.
+- Medir o **pior cenário** (largada com grid cheio, chuva, noite).
+- **GPU Busy / uso da GPU abaixo de ~70% → gargalo de CPU**: configurações gráficas não vão salvar o FPS.
+- Mudanças em **lotes de 3–4**, testando após cada lote.
+- Buscar **frametime consistente** (1% low, p99), não FPS médio alto.
+- IA erra: ela lê seus menus reais (screenshots) e cada lote é verificado com medição.
+  Nada de voltagem, clock ou curva de ventoinha vindo de IA sem conferir no manual.
 
-## 0. Ferramentas
+## Ferramentas (todas grátis)
 
-| Ferramenta | Para quê | Link |
-|---|---|---|
-| PresentMon (Intel) | Captura frametime + GPU busy (usado pelo `04-benchmark.ps1`) | https://github.com/GameTechDev/PresentMon/releases |
-| CapFrameX | Alternativa com interface gráfica para capturar/comparar (exporta CSV) | https://www.capframex.com/ |
-| HWiNFO64 | Temperaturas, clocks, throttling de CPU/GPU, uso de VRAM | https://www.hwinfo.com/ |
-| MSI Afterburner + RTSS | Overlay de FPS/frametime e limitador de FPS | https://www.msi.com/Landing/afterburner |
-| DDU | Remoção limpa de driver de vídeo antes de reinstalar | https://www.guru3d.com/download/display-driver-uninstaller-download/ |
-| NVIDIA App / Painel de Controle NVIDIA | Configurações do driver por jogo | — |
-| NVIDIA Profile Inspector (opcional) | Configurações avançadas de driver | https://github.com/Orbmu2k/nvidiaProfileInspector |
+| Ferramenta | Para quê |
+|---|---|
+| [PresentMon](https://github.com/GameTechDev/PresentMon/releases) | Overlay + captura: frametime, **GPU Busy**, e (no app de captura) potência/temperatura/uso da GPU. Cobre os passos 1 e 2. Funciona em NVIDIA/AMD/Intel. |
+| [HWiNFO64](https://www.hwinfo.com/) | Inventário detalhado e exportação de relatório (timings de RAM, discos, drivers); sensores de throttling. |
+| `scripts/windows/01-coletar-sistema.ps1` | Resumo rápido do sistema + alertas (complementa o HWiNFO). |
+| `scripts/windows/04-benchmark.ps1` + `analysis/analisar.py` | Captura e comparação de frametime entre lotes. |
 
-> Se o vídeo lista outras ferramentas na descrição, adicione aqui — não consegui acessar a descrição do
-> YouTube a partir do ambiente onde este repositório foi montado.
+Opcionais: MSI Afterburner + RTSS (limitador de FPS), DDU (reinstalação limpa de driver).
 
-## 1. Cenário de teste fixo (o mais importante)
+## Passo 0 — Cenário de teste fixo
 
-Sem cenário repetível, qualquer comparação é ruído.
+Sem cenário repetível, a comparação vira ruído.
+- Mesma pista, carro, clima/horário e **número de carros** (o que mais pesa na CPU no iRacing).
+- Sugestão: um **replay** de largada com grid cheio, sempre o mesmo trecho, câmera de cockpit.
+- 60–90 s por captura, **3 capturas por configuração**.
 
-- Mesma pista, mesmo carro, mesmo horário/clima, **mesmo número de carros** (o que mais pesa na CPU no iRacing).
-- Sugestão: grave um **replay** de uma largada com grid cheio e use sempre o mesmo trecho — é o pior caso real.
-- Mesma câmera (cockpit), mesma duração (60–90 s), **3 execuções por configuração** (use a média).
-- Feche navegador, Discord overlay, gravação etc. — ou deixe exatamente como você usa ao correr, mas sempre igual.
-
-## 2. Linha de base
+## Passo 1 — Relatório de hardware (em carga)
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\windows\01-coletar-sistema.ps1
-python iracing\iracing_ini.py backup "$env:USERPROFILE\Documents\iRacing"
-powershell -ExecutionPolicy Bypass -File scripts\windows\04-benchmark.ps1 -Rotulo baseline -Segundos 90 -Atraso 10
 ```
+Depois, **com o sim rodando no cenário de teste**:
+- HWiNFO64 → *Sensors* → deixe 2–3 min em carga → salve o log/relatório (clocks reais, temperatura,
+  "Power Limit Exceeded"/"Thermal Throttling").
+- PresentMon (app) com overlay ligado: anote GPU Busy, uso, temperatura e potência da GPU.
 
-Leia a coluna **Gargalo** do resumo:
-- **GPU busy ≥ 90%** → limitado pela GPU: configurações gráficas viram FPS direto.
-- **GPU busy ≤ 75%** → limitado pela CPU (normal no iRacing) ou pelo limitador de FPS/V-Sync.
-  Aqui baixar AA/resolução quase não ajuda; o que ajuda é reduzir carga de CPU.
-
-## 3. Ordem de ataque (maior ganho → menor)
-
-### Hardware / BIOS (grátis e costuma ser o maior ganho)
-- [ ] **XMP/EXPO ligado** (o `01-coletar-sistema.ps1` avisa se a RAM está abaixo da nominal).
-- [ ] RAM em **dual channel** (2 pentes nos slots certos — ver manual da placa, geralmente A2/B2).
-- [ ] BIOS atualizada; em Ryzen, testar **PBO/Curve Optimizer**; em Intel 13ª/14ª geração, BIOS com o microcode mais recente.
-- [ ] Temperaturas sob controle (HWiNFO: CPU sem "thermal throttling", GPU sem bater limite de temperatura).
-- [ ] Monitor na taxa de atualização máxima (Configurações > Vídeo > Avançado) e cabo DisplayPort/HDMI adequado.
-
-### Windows (`02-otimizar-windows.ps1`, reversível)
-- [ ] Modo de Jogo ligado, Xbox Game Bar/captura desligada.
-- [ ] HAGS: **teste ligado e desligado** — o resultado varia de PC para PC.
-- [ ] Otimizações para jogos em janela ligadas.
-- [ ] Plano de energia Alto desempenho.
-- [ ] Programas na inicialização: desligue o que não precisa (RGB, launchers, atualizadores).
-- [ ] (Opcional, avalie o risco) VBS/Integridade de memória: pode custar alguns % em jogos limitados por CPU, mas é uma proteção de segurança.
-
-### Driver de vídeo
-- [ ] Driver atualizado; se houver problemas, reinstalar limpo com DDU.
-- [ ] Modo de gerenciamento de energia: *Preferir desempenho máximo* (perfil do iRacing).
-- [ ] Baixa latência: NVIDIA Reflex/Low Latency Mode *On* — meça.
-- [ ] Limitador de FPS: um pouco abaixo do FPS que você sustenta no pior caso (ou do refresh com G-Sync/FreeSync) — frametime estável vale mais que pico.
-
-### iRacing (dentro do sim, *Options > Graphics*)
-Se o gargalo é **CPU**, estes costumam pesar mais:
-- Número máximo de carros desenhados / detalhe de carros distantes.
-- Sombras dinâmicas (especialmente de carros), espelhos (FPS e nº de carros nos espelhos).
-- Objetos/crowd/detalhe de pista, "dynamic track" visual.
-
-Se o gargalo é **GPU**:
-- MSAA/SSAA, resolução/escala, pós-processamento (HDR/bloom), sombras, reflexos, nuvens.
-
-Configurações que costumam ser "baratas" quando você está limitado por CPU: filtragem anisotrópica,
-qualidade de texturas (se houver VRAM sobrando).
-
-Ajustes em `.ini` (via `iracing/iracing_ini.py`): primeiro confira o nome/seção no **seu** arquivo com o
-comando `get`. Exemplo relatado pela comunidade: `VisibilityFrameDelay` (padrão 5) → 0 para reduzir stutter
-em curvas de pistas grandes. Teste como qualquer outra mudança.
-
-## 4. Loop de iteração
+## Passo 2 — CPU-bound ou GPU-bound?
 
 ```powershell
-# mudou UMA coisa? capture com um rótulo que descreva a mudança
-powershell -ExecutionPolicy Bypass -File scripts\windows\04-benchmark.ps1 -Rotulo sombras-carros-off
-# compare com a base (a primeira da lista é a referência)
-python analysis\analisar.py comparar runs\baseline-*.csv runs\sombras-carros-off-*.csv --markdown runs\comparacao.md --grafico runs\comparacao.png
+powershell -ExecutionPolicy Bypass -File scripts\windows\04-benchmark.ps1 -Rotulo baseline -Segundos 90 -Atraso 10
+```
+O resumo mostra **GPU busy** e a coluna **Gargalo**:
+- **< 70%** → CPU: reduza o que gera *draw calls* (carros visíveis, público, objetos de pit, espelhos,
+  cubemaps, sombras de objetos estáticos). Qualidade de textura/AA/shader tende a ser "grátis".
+- **70–90%** → misto: ajuste os dois lados com cuidado.
+- **≥ 90%** → GPU: MSAA, resolução, shaders, sombras e pós-processamento viram FPS direto.
+
+## Passo 3 — Screenshot de cada página de configurações
+
+Tire print de **todas** as abas de gráficos do sim (e do painel do driver, se quiser incluí-lo).
+Isso impede a IA de "lembrar" menus de versões antigas.
+
+## Passo 4 — O prompt
+
+Use o modelo em [`prompt-ia.md`](prompt-ia.md), anexando: JSON do passo 1, relatório do HWiNFO,
+resumo do `analisar.py` do passo 2 e os screenshots do passo 3.
+
+## Passo 5 — Aplicar em lotes e verificar
+
+```powershell
+# aplique um lote de 3-4 mudanças, depois:
+powershell -ExecutionPolicy Bypass -File scripts\windows\04-benchmark.ps1 -Rotulo lote1
+python analysis\analisar.py comparar runs\baseline-*.csv runs\lote1-*.csv --markdown runs\comparacao.md --grafico runs\comparacao.png
 ```
 
 Regras de decisão:
-- Mantenha a mudança se **1% low** e **p99 frametime** melhoram (ou ficam iguais) e o visual continua aceitável.
-- Diferenças abaixo de ~2–3% entre execuções são ruído: rode mais vezes antes de concluir.
-- Anote cada experimento em `docs/diario.md` (o que mudou, resultado, manteve ou não).
+- **Mantém** o lote se 1% low e p99 melhoram (ou ficam iguais) e o visual continua aceitável.
+- **Piorou?** Desfaça metade do lote e meça de novo até achar o culpado.
+- Diferença < ~2–3% entre capturas é ruído: repita antes de concluir.
+- Registre tudo em [`diario.md`](diario.md).
+
+Os `.ini` do iRacing têm backup/diff/edição em `iracing/iracing_ini.py`. Confira nome e seção de qualquer
+chave no **seu** arquivo (`get`) antes de mudar; a pesquisa da KB tem nomes não confirmados
+(ver [`kb/revisao-pesquisa.md`](kb/revisao-pesquisa.md)).
+
+## Ajustes fora do sim (fazer uma vez, também medindo)
+
+- **BIOS/RAM:** XMP/EXPO se a placa permitir; dual channel; BIOS atualizada.
+- **Windows** (`02-otimizar-windows.ps1`, reversível): Modo de Jogo, Game Bar/captura off, HAGS (teste ligado e
+  desligado), otimização para jogos em janela, plano Alto desempenho, limpar programas de inicialização.
+- **Driver:** atualizado (DDU se houver problema); gerenciamento de energia "desempenho máximo" no perfil do
+  sim; limitador de FPS um pouco abaixo do FPS mínimo sustentado (ou do refresh com G-Sync).
+- VBS/Integridade de memória: pode custar alguns % em cenário limitado por CPU, mas é proteção de segurança —
+  decisão sua, com medição.
