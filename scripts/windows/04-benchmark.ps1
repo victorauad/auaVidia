@@ -24,10 +24,14 @@ $ErrorActionPreference = 'Stop'
 # No Windows PowerShell 5.1, $PSScriptRoot fica vazio nos valores padrão de parâmetros de scripts
 # com [Parameter(Mandatory)]; por isso os caminhos são resolvidos aqui no corpo.
 $raiz = Split-Path (Split-Path $PSScriptRoot)
-if (-not $PresentMon) { $PresentMon = Join-Path $raiz 'tools\PresentMon.exe' }
+if (-not $PresentMon) {
+    # Aceita o nome original do download (ex.: PresentMon-2.x.x-x64.exe) ou renomeado.
+    $achado = Get-ChildItem (Join-Path $raiz 'tools') -Filter 'PresentMon*.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+    $PresentMon = if ($achado) { $achado.FullName } else { Join-Path $raiz 'tools\PresentMon.exe' }
+}
 
 if (-not (Test-Path $PresentMon)) {
-    throw "PresentMon não encontrado em $PresentMon. Baixe em https://github.com/GameTechDev/PresentMon/releases"
+    throw "PresentMon não encontrado em $PresentMon. Baixe a versão console (.exe x64) em https://github.com/GameTechDev/PresentMon/releases e coloque na pasta tools."
 }
 $pasta = Join-Path $raiz 'runs'
 New-Item -ItemType Directory -Force -Path $pasta | Out-Null
