@@ -18,14 +18,18 @@ param(
     [int]$Segundos = 60,
     [int]$Atraso = 5,
     [string]$Processo = 'iRacingSim64DX11.exe',
-    [string]$PresentMon = (Join-Path $PSScriptRoot '..\..\tools\PresentMon.exe')
+    [string]$PresentMon
 )
 $ErrorActionPreference = 'Stop'
+# No Windows PowerShell 5.1, $PSScriptRoot fica vazio nos valores padrão de parâmetros de scripts
+# com [Parameter(Mandatory)]; por isso os caminhos são resolvidos aqui no corpo.
+$raiz = Split-Path (Split-Path $PSScriptRoot)
+if (-not $PresentMon) { $PresentMon = Join-Path $raiz 'tools\PresentMon.exe' }
 
 if (-not (Test-Path $PresentMon)) {
     throw "PresentMon não encontrado em $PresentMon. Baixe em https://github.com/GameTechDev/PresentMon/releases"
 }
-$pasta = Join-Path $PSScriptRoot '..\..\runs'
+$pasta = Join-Path $raiz 'runs'
 New-Item -ItemType Directory -Force -Path $pasta | Out-Null
 $saida = Join-Path $pasta ("{0}-{1}.csv" -f $Rotulo, (Get-Date -Format yyyyMMdd-HHmmss))
 
@@ -36,4 +40,4 @@ if (-not (Test-Path $saida)) { throw "Nenhum CSV gerado. O jogo ($Processo) esta
 
 Write-Host "Captura salva em $saida" -ForegroundColor Green
 $py = Get-Command python -ErrorAction SilentlyContinue
-if ($py) { & python (Join-Path $PSScriptRoot '..\..\analysis\analisar.py') resumo $saida }
+if ($py) { & python (Join-Path $raiz 'analysis\analisar.py') resumo $saida }

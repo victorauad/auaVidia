@@ -7,9 +7,10 @@
   powershell -ExecutionPolicy Bypass -File scripts\windows\01-coletar-sistema.ps1
 #>
 param(
-    [string]$Saida = (Join-Path $PSScriptRoot "..\..\runs\sistema-$(Get-Date -Format yyyyMMdd-HHmmss).json")
+    [string]$Saida
 )
 $ErrorActionPreference = 'Continue'
+if (-not $Saida) { $Saida = Join-Path (Split-Path (Split-Path $PSScriptRoot)) "runs\sistema-$(Get-Date -Format yyyyMMdd-HHmmss).json" }
 
 function Get-RegValue($Path, $Name) {
     try { (Get-ItemProperty -Path $Path -Name $Name -ErrorAction Stop).$Name } catch { $null }
