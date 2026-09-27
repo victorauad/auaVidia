@@ -25,6 +25,7 @@ Objetivos:
 | `docs/kb/` | Base de conhecimento: descrição do vídeo, pesquisa sobre gráficos do iRacing e a revisão dela (`revisao-pesquisa.md`, com correções e plano de lotes para i7-9700 + RTX 3060). |
 | `docs/meu-pc.md` | Perfil e diagnóstico do meu PC (i7-9700 + RTX 3060). |
 | `docs/roteiro-corrida-ia.md` | Passo a passo do benchmark em corrida contra IA. |
+| `docs/plano-lotes.md` | Plano de lotes para o meu PC (GPU-bound, triple 1080p). |
 | `docs/diario.md` | Registro dos lotes testados. |
 
 ## Início rápido (Windows)
